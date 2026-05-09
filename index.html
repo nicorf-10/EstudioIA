@@ -962,8 +962,31 @@
     </div>
   </header>
 
+  <!-- Screen 0: API Key -->
+  <div id="screen-apikey" class="screen active">
+    <div class="hero">
+      <h1>Bienvenido a<br><span>StudyMind</span></h1>
+      <p>Introduce tu API key de Anthropic para empezar. Se guarda solo en tu navegador y nunca se envía a ningún servidor externo.</p>
+    </div>
+    <div class="textarea-wrap" style="max-width:520px;margin:0 auto 16px;">
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;">
+        <i class="ti ti-key" style="font-size:20px;color:var(--accent3);flex-shrink:0"></i>
+        <input type="password" id="apikey-input" placeholder="sk-ant-api03-..." style="flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--font-body);font-size:14px;" oninput="checkApiKey()">
+        <button onclick="toggleKeyVisibility()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;padding:0;" id="eye-btn"><i class="ti ti-eye" id="eye-icon"></i></button>
+      </div>
+    </div>
+    <div style="text-align:center;margin-bottom:12px;">
+      <button class="btn-primary" id="apikey-btn" onclick="saveApiKey()" disabled>
+        <i class="ti ti-arrow-right"></i> Continuar
+      </button>
+    </div>
+    <p style="text-align:center;font-size:13px;color:var(--text3);">
+      ¿No tienes key? Consíguela en <a href="https://console.anthropic.com" style="color:var(--accent3)">console.anthropic.com</a>
+    </p>
+  </div>
+
   <!-- Screen 1: Upload -->
-  <div id="screen-upload" class="screen active">
+  <div id="screen-upload" class="screen">
     <div class="hero">
       <h1>Estudia más inteligente<br>con <span>IA personalizada</span></h1>
       <p>Sube tus apuntes y la IA los analizará para crear cuestionarios, tarjetas y una sesión de preguntas adaptada a ti.</p>
@@ -1172,6 +1195,36 @@
 <script>
 const API_URL = "https://api.anthropic.com/v1/messages";
 
+let userApiKey = localStorage.getItem('studymind_apikey') || '';
+if (userApiKey) { setTimeout(() => showScreen('screen-upload'), 0); }
+
+function checkApiKey() {
+  const val = document.getElementById('apikey-input').value.trim();
+  document.getElementById('apikey-btn').disabled = val.length < 20;
+}
+function toggleKeyVisibility() {
+  const input = document.getElementById('apikey-input');
+  const icon = document.getElementById('eye-icon');
+  if (input.type === 'password') { input.type = 'text'; icon.className = 'ti ti-eye-off'; }
+  else { input.type = 'password'; icon.className = 'ti ti-eye'; }
+}
+function saveApiKey() {
+  const key = document.getElementById('apikey-input').value.trim();
+  if (!key) return;
+  userApiKey = key;
+  localStorage.setItem('studymind_apikey', key);
+  showScreen('screen-upload');
+}
+
+function getHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'x-api-key': userApiKey,
+    'anthropic-version': '2023-06-01',
+    'anthropic-dangerous-direct-browser-iab': 'true'
+  };
+}
+
 let appData = null;
 let currentMode = 'quiz';
 let quizState = { questions: [], current: 0, correct: 0, wrong: 0, answered: false };
@@ -1257,7 +1310,7 @@ Genera exactamente: 3-5 temas, 8-12 preguntas (2-3 por tema), 8-12 flashcards. D
 
     const resp = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 4000,
@@ -1522,7 +1575,7 @@ Reglas:
 
     const resp = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
